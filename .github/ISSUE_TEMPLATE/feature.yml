@@ -1,0 +1,27 @@
+name: Feature Request
+description: Create a feature request
+title: "[Feat]: "
+labels: ["feature"]
+projects: ["dorasto/11"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out a feature request!
+  - type: input
+    id: username
+    attributes:
+      label: Doras Username
+      description: Share your Doras username should it be relevant
+      placeholder: doras.to/USERNAME
+    validations:
+      required: false
+  - type: textarea
+    id: about
+    attributes:
+      label: What are you looking for?
+      description: Please be as specific as possible
+      placeholder: It would be cool if...
+      value: "It would be cool if..."
+    validations:
+      required: true
