@@ -1,6 +1,5 @@
 name: New block idea
 description: Submit your custom block ideas
-title: "[Block]: "
 labels: ["New block"]
 projects: ["dorasto/11"]
 body:
