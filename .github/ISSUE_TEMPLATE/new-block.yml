@@ -1,0 +1,46 @@
+name: New block idea
+description: Submit your custom block ideas
+title: "[Block]: "
+labels: ["New block"]
+projects: ["dorasto/11"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### New block
+        Please make sure you've searched through existing issues that this block hasn't been already requested. You can show your interest on existing issues rather than creating new ones.
+  - type: input
+    id: username
+    attributes:
+      label: Doras Username
+      description: Share your Doras username should it be relevant
+      placeholder: doras.to/USERNAME
+    validations:
+      required: false
+  - type: input
+    id: block-name
+    attributes:
+      label: Block name
+      description: What should the block be called?
+      placeholder: Gallery Block
+    validations:
+      required: true
+  - type: textarea
+    id: what-it-do
+    attributes:
+      label: What should the block do?
+      placeholder: The block should allow me to add images to be shown in a grid
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Standard block or rich text?
+      description: We have standard blocks that you drag onto your profile, and also have blocks that you can use with our rich text editor (within the rich text block/blog posts/etc). Where should this block live?
+      options:
+        - Standard block
+        - Rich text
+        - It should be in both
+      default: 0
+    validations:
+      required: true
