@@ -16,7 +16,7 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '**Thank you for making Doras a better place 🚀**
-              
-              This has been added to our [Public Project Board](https://github.com/orgs/dorasto/projects/11/) and our team will triage and action accordingly.'
+              body: `**Thank you for making Doras a better place 🚀**
+
+              This has been added to our [Public Project Board](https://github.com/orgs/dorasto/projects/11/) and our team will triage and action accordingly.`
             })
