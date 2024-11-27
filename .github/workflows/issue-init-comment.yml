@@ -10,6 +10,7 @@ jobs:
     steps:
       - uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.DORAS_ADMIN }}
           script: |
             github.rest.issues.createComment({
               issue_number: context.issue.number,
