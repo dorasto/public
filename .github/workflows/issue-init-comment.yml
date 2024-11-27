@@ -1,4 +1,4 @@
-name: issue-checklist
+name: Comment on issue
 
 on:
   issues:
@@ -7,9 +7,15 @@ on:
 jobs:
   comment:
     runs-on: ubuntu-latest
-
     steps:
-    - uses: ben-z/actions-comment-on-issue@1.0.3
-      with:
-        message: "Thanks for creating this issue you're making Doras a better place! This issue has been added to our [Public Project Board](https://github.com/orgs/dorasto/projects/11) \n Our team will triage and action accordingly."
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '**Thank you for making Doras a better place 🚀**
+              
+              This has been added to our [Public Project Board](https://github.com/orgs/dorasto/projects/11/) and our team will triage and action accordingly.'
+            })
