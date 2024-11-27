@@ -1,0 +1,15 @@
+name: issue-checklist
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  comment:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: ben-z/actions-comment-on-issue@1.0.3
+      with:
+        message: "Thanks for creating this issue you're making Doras a better place! This issue has been added to our [Public Project Board](https://github.com/orgs/dorasto/projects/11) \n Our team will triage and action accordingly."
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
