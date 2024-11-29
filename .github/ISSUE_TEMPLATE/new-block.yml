@@ -2,6 +2,7 @@ name: New block idea
 description: Submit your custom block ideas
 labels: ["New block"]
 projects: ["dorasto/11"]
+type: "New Block"
 body:
   - type: markdown
     attributes:
