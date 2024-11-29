@@ -2,6 +2,7 @@ name: Feature Request
 description: Create a feature request
 labels: ["feature"]
 projects: ["dorasto/11"]
+type: "Feature"
 body:
   - type: markdown
     attributes:
