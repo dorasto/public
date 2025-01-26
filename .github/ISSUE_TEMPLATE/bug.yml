@@ -39,8 +39,9 @@ body:
       label: User or Brand related
       description: Is this happening on your user account, or while on a brand account?
       options:
-        - My acconut
+        - My account
         - On a brand account
+        - Both
       default: 0
     validations:
       required: true
