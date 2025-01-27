@@ -1,13 +1,4 @@
 name: Release Notes Management
-# What this does:
-# - Creates release notes with proper categorization
-# - Manages milestones automatically
-# - Updates the release notes when new issues are labeled
-# - Adds issues to the milestone automatically
-# - Closes milestone when release notes are closed
-# - Integrates with project board dorasto/11
-# - Maintains proper labeling
-# - Categorizes changes based on issue labels
 on:
   workflow_dispatch:
     inputs:
@@ -60,7 +51,6 @@ jobs:
                 for (const label of issue.labels) {
                   if (label.name.includes('feature')) category = '🚀 New Features';
                   else if (label.name.includes('bug')) category = '🐛 Bug Fixes';
-
                 }
                 
                 categories[category].push(`- ${issue.title} (#${issue.number})`);
@@ -109,8 +99,7 @@ jobs:
                 title: version,
                 body: body,
                 labels: ['release', 'Release Notes', version],
-                milestone: milestone.number,
-                projects: ['dorasto/11']
+                milestone: milestone.number
               });
               
               // Add all related issues to the milestone
@@ -170,4 +159,3 @@ jobs:
                 });
               }
             }
-
