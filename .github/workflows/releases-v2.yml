@@ -55,7 +55,7 @@ jobs:
                   else if (label.name.includes('bug')) category = '🐛 Bug Fixes';
                 }
                 
-                categories[category].push(`- #${issue.number}`);
+                categories[category].push(`- ${issue.title} (#${issue.number})`);
               }
               
               for (const [category, items] of Object.entries(categories)) {
@@ -125,6 +125,17 @@ jobs:
             
             // Handle issue labeled event (update existing release notes)
             if (context.payload.action === 'labeled' && version?.startsWith('v')) {
+              // First, add the issue to the milestone if needed
+              if (!context.payload.issue.milestone) {
+                await github.rest.issues.update({
+                  owner: repoOwner,
+                  repo: repoName,
+                  issue_number: context.payload.issue.number,
+                  milestone: milestone.number
+                });
+              }
+
+              // Then update the release notes
               const issues = await github.rest.issues.listForRepo({
                 owner: repoOwner,
                 repo: repoName,
@@ -147,7 +158,7 @@ jobs:
             
             // Handle release notes issue being closed
             if (context.payload.action === 'closed' && 
-                context.payload.issue.labels.find(l => l.name === 'release')) {
+                context.payload.issue.labels.find(l => l.name === 'Release Notes')) {
               // Close the milestone
               const issueLabels = context.payload.issue.labels.map(l => l.name);
               const versionLabel = issueLabels.find(l => l.startsWith('v'));
