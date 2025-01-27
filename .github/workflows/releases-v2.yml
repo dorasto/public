@@ -1,0 +1,173 @@
+name: Release Notes Management
+# What this does:
+# - Creates release notes with proper categorization
+# - Manages milestones automatically
+# - Updates the release notes when new issues are labeled
+# - Adds issues to the milestone automatically
+# - Closes milestone when release notes are closed
+# - Integrates with project board dorasto/11
+# - Maintains proper labeling
+# - Categorizes changes based on issue labels
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (e.g., v0.3.6)'
+        required: true
+        type: string
+  issues:
+    types: [labeled, closed]
+
+jobs:
+  manage-release-notes:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const version = context.payload.inputs?.version || context.payload.label?.name;
+            
+            // Only proceed if this is a version label (starts with 'v')
+            if (!version?.startsWith('v')) {
+              return;
+            }
+            
+            // Function to generate issue body
+            async function generateIssueBody(version) {
+              const issues = await github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.name,
+                state: 'all',
+                labels: version
+              });
+              
+              let body = `# Release Notes for ${version}\n\n## Changes in this Release\n\n`;
+              
+              const categories = {
+                '🚀 New Features': [],
+                '🐛 Bug Fixes': [],
+                '📦 Other': []
+              };
+              
+              for (const issue of issues.data) {
+                if (issue.number === context.issue?.number) continue;
+                
+                let category = '📦 Other';
+                for (const label of issue.labels) {
+                  if (label.name.includes('feature')) category = '🚀 New Features';
+                  else if (label.name.includes('bug')) category = '🐛 Bug Fixes';
+
+                }
+                
+                categories[category].push(`- ${issue.title} (#${issue.number})`);
+              }
+              
+              for (const [category, items] of Object.entries(categories)) {
+                if (items.length > 0) {
+                  body += `\n### ${category}\n${items.join('\n')}\n`;
+                }
+              }
+              
+              body += '\n\n---\n*This release note is automatically managed*';
+              return body;
+            }
+            
+            // Create or get milestone
+            let milestone;
+            try {
+              const milestones = await github.rest.issues.listMilestones({
+                owner: context.repo.owner,
+                repo: context.repo.name,
+                state: 'open'
+              });
+              
+              milestone = milestones.data.find(m => m.title === version);
+              
+              if (!milestone) {
+                const newMilestone = await github.rest.issues.createMilestone({
+                  owner: context.repo.owner,
+                  repo: context.repo.name,
+                  title: version
+                });
+                milestone = newMilestone.data;
+              }
+            } catch (error) {
+              console.error('Milestone operation failed:', error);
+            }
+            
+            // Handle workflow dispatch (new release notes creation)
+            if (context.payload.inputs?.version) {
+              const body = await generateIssueBody(version);
+              
+              const newIssue = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.name,
+                title: version,
+                body: body,
+                labels: ['release', 'Release Notes', version],
+                milestone: milestone.number,
+                projects: ['dorasto/11']
+              });
+              
+              // Add all related issues to the milestone
+              const issues = await github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.name,
+                labels: version
+              });
+              
+              for (const issue of issues.data) {
+                if (!issue.milestone) {
+                  await github.rest.issues.update({
+                    owner: context.repo.owner,
+                    repo: context.repo.name,
+                    issue_number: issue.number,
+                    milestone: milestone.number
+                  });
+                }
+              }
+            }
+            
+            // Handle issue labeled event (update existing release notes)
+            if (context.payload.action === 'labeled' && version?.startsWith('v')) {
+              const issues = await github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.name,
+                labels: ['Release Notes', version],
+                state: 'open'
+              });
+              
+              if (issues.data.length > 0) {
+                const releaseNote = issues.data[0];
+                const updatedBody = await generateIssueBody(version);
+                
+                await github.rest.issues.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.name,
+                  issue_number: releaseNote.number,
+                  body: updatedBody
+                });
+              }
+            }
+            
+            // Handle release notes issue being closed
+            if (context.payload.action === 'closed' && 
+                context.payload.issue.labels.find(l => l.name === 'Release Notes')) {
+              // Close the milestone
+              const issueLabels = context.payload.issue.labels.map(l => l.name);
+              const versionLabel = issueLabels.find(l => l.startsWith('v'));
+              
+              if (versionLabel && milestone) {
+                await github.rest.issues.updateMilestone({
+                  owner: context.repo.owner,
+                  repo: context.repo.name,
+                  milestone_number: milestone.number,
+                  state: 'closed'
+                });
+              }
+            }
+
