@@ -48,6 +48,7 @@ jobs:
               
               for (const issue of issues.data) {
                 if (issue.number === context.issue?.number) continue;
+                if (issue.labels.find(l => l.name === 'Release Notes')) continue;
                 
                 let category = '📦 Other';
                 for (const label of issue.labels) {
