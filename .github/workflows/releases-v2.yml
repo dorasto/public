@@ -18,9 +18,11 @@ jobs:
     steps:
       - uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.DORAS_ADMIN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const version = context.payload.inputs?.version || context.payload.label?.name;
+            const repoOwner = 'dorasto';
+            const repoName = 'public';
             
             // Only proceed if this is a version label (starts with 'v')
             if (!version?.startsWith('v')) {
@@ -30,8 +32,8 @@ jobs:
             // Function to generate issue body
             async function generateIssueBody(version) {
               const issues = await github.rest.issues.listForRepo({
-                owner: context.repo.owner,
-                repo: context.repo.name,
+                owner: repoOwner,
+                repo: repoName,
                 state: 'all',
                 labels: version
               });
@@ -70,8 +72,8 @@ jobs:
             let milestone;
             try {
               const milestones = await github.rest.issues.listMilestones({
-                owner: context.repo.owner,
-                repo: context.repo.name,
+                owner: repoOwner,
+                repo: repoName,
                 state: 'open'
               });
               
@@ -79,8 +81,8 @@ jobs:
               
               if (!milestone) {
                 const newMilestone = await github.rest.issues.createMilestone({
-                  owner: context.repo.owner,
-                  repo: context.repo.name,
+                  owner: repoOwner,
+                  repo: repoName,
                   title: version
                 });
                 milestone = newMilestone.data;
@@ -94,8 +96,8 @@ jobs:
               const body = await generateIssueBody(version);
               
               const newIssue = await github.rest.issues.create({
-                owner: context.repo.owner,
-                repo: context.repo.name,
+                owner: repoOwner,
+                repo: repoName,
                 title: version,
                 body: body,
                 labels: ['release', 'Release Notes', version],
@@ -104,16 +106,16 @@ jobs:
               
               // Add all related issues to the milestone
               const issues = await github.rest.issues.listForRepo({
-                owner: context.repo.owner,
-                repo: context.repo.name,
+                owner: repoOwner,
+                repo: repoName,
                 labels: version
               });
               
               for (const issue of issues.data) {
                 if (!issue.milestone) {
                   await github.rest.issues.update({
-                    owner: context.repo.owner,
-                    repo: context.repo.name,
+                    owner: repoOwner,
+                    repo: repoName,
                     issue_number: issue.number,
                     milestone: milestone.number
                   });
@@ -124,8 +126,8 @@ jobs:
             // Handle issue labeled event (update existing release notes)
             if (context.payload.action === 'labeled' && version?.startsWith('v')) {
               const issues = await github.rest.issues.listForRepo({
-                owner: context.repo.owner,
-                repo: context.repo.name,
+                owner: repoOwner,
+                repo: repoName,
                 labels: ['Release Notes', version],
                 state: 'open'
               });
@@ -135,8 +137,8 @@ jobs:
                 const updatedBody = await generateIssueBody(version);
                 
                 await github.rest.issues.update({
-                  owner: context.repo.owner,
-                  repo: context.repo.name,
+                  owner: repoOwner,
+                  repo: repoName,
                   issue_number: releaseNote.number,
                   body: updatedBody
                 });
@@ -152,8 +154,8 @@ jobs:
               
               if (versionLabel && milestone) {
                 await github.rest.issues.updateMilestone({
-                  owner: context.repo.owner,
-                  repo: context.repo.name,
+                  owner: repoOwner,
+                  repo: repoName,
                   milestone_number: milestone.number,
                   state: 'closed'
                 });
