@@ -55,7 +55,7 @@ jobs:
                   else if (label.name.includes('bug')) category = '🐛 Bug Fixes';
                 }
                 
-                categories[category].push(`- ${issue.title} (#${issue.number})`);
+                categories[category].push(`- #${issue.number}`);
               }
               
               for (const [category, items] of Object.entries(categories)) {
@@ -147,17 +147,19 @@ jobs:
             
             // Handle release notes issue being closed
             if (context.payload.action === 'closed' && 
-                context.payload.issue.labels.find(l => l.name === 'Release Notes')) {
+                context.payload.issue.labels.find(l => l.name === 'release')) {
               // Close the milestone
               const issueLabels = context.payload.issue.labels.map(l => l.name);
               const versionLabel = issueLabels.find(l => l.startsWith('v'));
               
               if (versionLabel && milestone) {
+                const closeDate = new Date().toISOString();
                 await github.rest.issues.updateMilestone({
                   owner: repoOwner,
                   repo: repoName,
                   milestone_number: milestone.number,
-                  state: 'closed'
+                  state: 'closed',
+                  due_on: closeDate
                 });
               }
             }
