@@ -34,16 +34,11 @@ jobs:
               milestoneAction: 'none'
             };
             
-            console.log(`🔍 Processing version: ${version}`);
-            
             if (!version?.startsWith('v')) {
-              console.log('⏭️ Skipping: Not a version label');
               return JSON.stringify(actionSummary);
             }
             
             async function generateIssueBody(version) {
-              console.log(`📝 Generating release notes for ${version}`);
-              
               const issues = await github.rest.issues.listForRepo({
                 owner: repoOwner,
                 repo: repoName,
@@ -53,7 +48,6 @@ jobs:
               });
               
               actionSummary.issuesProcessed = issues.data.length;
-              console.log(`📊 Found ${issues.data.length} issues with label ${version}`);
               
               let body = `# Release Notes for ${version}\n\n## Changes in this Release\n\n`;
               
@@ -64,7 +58,6 @@ jobs:
               };
               
               for (const issue of issues.data) {
-                if (issue.number === context.issue?.number) continue;
                 if (issue.labels.find(l => l.name === 'Release Notes')) continue;
                 
                 let category = '📦 Other';
@@ -102,7 +95,6 @@ jobs:
               milestone = milestones.data.find(m => m.title === version);
               
               if (!milestone) {
-                console.log(`🎯 Creating new milestone for ${version}`);
                 const newMilestone = await github.rest.issues.createMilestone({
                   owner: repoOwner,
                   repo: repoName,
@@ -114,7 +106,7 @@ jobs:
                 actionSummary.milestoneAction = 'existing';
               }
             } catch (error) {
-              console.error('❌ Milestone operation failed:', error);
+              console.error('Milestone operation failed:', error);
               actionSummary.milestoneAction = 'failed';
             }
             
@@ -134,7 +126,8 @@ jobs:
               const issues = await github.rest.issues.listForRepo({
                 owner: repoOwner,
                 repo: repoName,
-                labels: version
+                labels: version,
+                state: 'all'
               });
               
               for (const issue of issues.data) {
@@ -161,15 +154,15 @@ jobs:
                 });
               }
 
-              const issues = await github.rest.issues.listForRepo({
+              const releaseNotes = await github.rest.issues.listForRepo({
                 owner: repoOwner,
                 repo: repoName,
                 labels: ['Release Notes', version],
                 state: 'open'
               });
               
-              if (issues.data.length > 0) {
-                const releaseNote = issues.data[0];
+              if (releaseNotes.data.length > 0) {
+                const releaseNote = releaseNotes.data[0];
                 const updatedBody = await generateIssueBody(version);
                 
                 await github.rest.issues.update({
