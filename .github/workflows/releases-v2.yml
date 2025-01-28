@@ -71,7 +71,7 @@ jobs:
                   category: category
                 });
                 
-                categories[category].push(`- ${issue.title} (#${issue.number})`);
+                categories[category].push(`- #${issue.number}`);
               }
               
               for (const [category, items] of Object.entries(categories)) {
@@ -80,7 +80,7 @@ jobs:
                 }
               }
               
-              body += '\n\n---\n*This release note is automatically managed*';
+              body += '\n\n---\n*This release note is automatically managed. Any issues that contain the label related to the release will be added here. Final release notes will be added prior to the close.* \n\n **Please do not edit this release note. If you need to make changes, please contact the maintainer.** \n\n This issue will be closed when the release is live.';
               return body;
             }
             
