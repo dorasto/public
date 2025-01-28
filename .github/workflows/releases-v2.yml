@@ -17,26 +17,43 @@ jobs:
     
     steps:
       - uses: actions/github-script@v7
+        id: release-notes
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          result-encoding: string
           script: |
             const version = context.payload.inputs?.version || context.payload.label?.name;
             const repoOwner = 'dorasto';
             const repoName = 'public';
             
-            // Only proceed if this is a version label (starts with 'v')
+            let actionSummary = {
+              version: version,
+              action: 'no_action',
+              issuesProcessed: 0,
+              updatedIssues: [],
+              milestoneAction: 'none'
+            };
+            
+            console.log(`🔍 Processing version: ${version}`);
+            
             if (!version?.startsWith('v')) {
-              return;
+              console.log('⏭️ Skipping: Not a version label');
+              return JSON.stringify(actionSummary);
             }
             
-            // Function to generate issue body
             async function generateIssueBody(version) {
+              console.log(`📝 Generating release notes for ${version}`);
+              
               const issues = await github.rest.issues.listForRepo({
                 owner: repoOwner,
                 repo: repoName,
                 state: 'all',
-                labels: version
+                labels: version,
+                per_page: 100
               });
+              
+              actionSummary.issuesProcessed = issues.data.length;
+              console.log(`📊 Found ${issues.data.length} issues with label ${version}`);
               
               let body = `# Release Notes for ${version}\n\n## Changes in this Release\n\n`;
               
@@ -56,6 +73,11 @@ jobs:
                   else if (label.name.includes('bug')) category = '🐛 Bug Fixes';
                 }
                 
+                actionSummary.updatedIssues.push({
+                  number: issue.number,
+                  category: category
+                });
+                
                 categories[category].push(`- ${issue.title} (#${issue.number})`);
               }
               
@@ -69,7 +91,6 @@ jobs:
               return body;
             }
             
-            // Create or get milestone
             let milestone;
             try {
               const milestones = await github.rest.issues.listMilestones({
@@ -81,19 +102,24 @@ jobs:
               milestone = milestones.data.find(m => m.title === version);
               
               if (!milestone) {
+                console.log(`🎯 Creating new milestone for ${version}`);
                 const newMilestone = await github.rest.issues.createMilestone({
                   owner: repoOwner,
                   repo: repoName,
                   title: version
                 });
                 milestone = newMilestone.data;
+                actionSummary.milestoneAction = 'created';
+              } else {
+                actionSummary.milestoneAction = 'existing';
               }
             } catch (error) {
-              console.error('Milestone operation failed:', error);
+              console.error('❌ Milestone operation failed:', error);
+              actionSummary.milestoneAction = 'failed';
             }
             
-            // Handle workflow dispatch (new release notes creation)
             if (context.payload.inputs?.version) {
+              actionSummary.action = 'created';
               const body = await generateIssueBody(version);
               
               const newIssue = await github.rest.issues.create({
@@ -105,7 +131,6 @@ jobs:
                 milestone: milestone.number
               });
               
-              // Add all related issues to the milestone
               const issues = await github.rest.issues.listForRepo({
                 owner: repoOwner,
                 repo: repoName,
@@ -124,9 +149,9 @@ jobs:
               }
             }
             
-            // Handle issue labeled event (update existing release notes)
             if (context.payload.action === 'labeled' && version?.startsWith('v')) {
-              // First, add the issue to the milestone if needed
+              actionSummary.action = 'updated';
+              
               if (!context.payload.issue.milestone) {
                 await github.rest.issues.update({
                   owner: repoOwner,
@@ -136,7 +161,6 @@ jobs:
                 });
               }
 
-              // Then update the release notes
               const issues = await github.rest.issues.listForRepo({
                 owner: repoOwner,
                 repo: repoName,
@@ -157,10 +181,10 @@ jobs:
               }
             }
             
-            // Handle release notes issue being closed
             if (context.payload.action === 'closed' && 
                 context.payload.issue.labels.find(l => l.name === 'Release Notes')) {
-              // Close the milestone
+              actionSummary.action = 'closed';
+              
               const issueLabels = context.payload.issue.labels.map(l => l.name);
               const versionLabel = issueLabels.find(l => l.startsWith('v'));
               
@@ -175,3 +199,31 @@ jobs:
                 });
               }
             }
+            
+            return JSON.stringify(actionSummary);
+
+      - name: Create Job Summary
+        run: |
+          echo "# Release Notes Management Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          RESULT='${{ steps.release-notes.outputs.result }}'
+          VERSION=$(echo $RESULT | jq -r '.version')
+          ACTION=$(echo $RESULT | jq -r '.action')
+          ISSUES_COUNT=$(echo $RESULT | jq -r '.issuesProcessed')
+          MILESTONE_ACTION=$(echo $RESULT | jq -r '.milestoneAction')
+          
+          echo "## Action Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version:** \`$VERSION\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Action performed:** $ACTION" >> $GITHUB_STEP_SUMMARY
+          echo "- **Issues processed:** $ISSUES_COUNT" >> $GITHUB_STEP_SUMMARY
+          echo "- **Milestone:** $MILESTONE_ACTION" >> $GITHUB_STEP_SUMMARY
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Updated Issues" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`json" >> $GITHUB_STEP_SUMMARY
+          echo $RESULT | jq -r '.updatedIssues' >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🔗 [View Release Notes](https://github.com/${{ github.repository }}/issues?q=is%3Aissue+label%3A%22Release+Notes%22)" >> $GITHUB_STEP_SUMMARY
