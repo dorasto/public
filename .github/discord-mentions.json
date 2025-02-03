@@ -1,0 +1,7 @@
+{
+    "githubToDiscord": {
+      "tommerty": "${{ secrets.DISCORD_ID_TOMMERTY }}",
+      "trent-001": "${{ secrets.DISCORD_ID_TRENT }}",
+      "QGeeDev": "${{ secrets.DISCORD_ID_QGEE }}"
+    }
+  }

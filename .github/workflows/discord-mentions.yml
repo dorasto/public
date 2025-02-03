@@ -1,0 +1,62 @@
+name: Discord Mention Notification
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check for mentions and notify Discord
+        uses: actions/github-script@v7
+        env:
+          DISCORD_ID_TOMMERTY: ${{ secrets.DISCORD_ID_TOMMERTY }}
+          DISCORD_ID_TRENT: ${{ secrets.DISCORD_ID_TRENT }}
+          DISCORD_ID_QGEE: ${{ secrets.DISCORD_ID_QGEE }}
+        with:
+          script: |
+            const discordMappings = {
+              'tommerty': process.env.DISCORD_ID_TOMMERTY,
+              'trent-001': process.env.DISCORD_ID_TRENT,
+              'QGeeDev': process.env.DISCORD_ID_QGEE
+            };
+            
+            // Get the comment content
+            const comment = context.payload.comment.body;
+            
+            // Find all GitHub mentions in the comment
+            const mentions = comment.match(/@[\w-]+/g) || [];
+            
+            // Convert GitHub mentions to Discord mentions
+            const discordMentions = mentions
+              .map(mention => {
+                const githubUser = mention.substring(1);
+                const discordId = discordMappings[githubUser];
+                return discordId ? `<@${discordId}>` : null;
+              })
+              .filter(Boolean);
+            
+            if (discordMentions.length > 0) {
+              // Prepare Discord message
+              const message = {
+                content: `New mention in ${context.payload.repository.full_name}:\n${discordMentions.join(' ')}\n\nOriginal comment: ${context.payload.comment.html_url}`,
+                allowed_mentions: {
+                  users: discordMentions.map(m => m.replace(/[<@>]/g, ''))
+                }
+              };
+              
+              // Send to Discord webhook
+              await github.request('POST ${{ secrets.MENTION_BOT_WEBHOOK }}', {
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                data: message
+              });
+            }
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
